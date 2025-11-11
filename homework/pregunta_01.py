@@ -76,7 +76,7 @@ def pregunta_01():
     import pandas as pd
 
 
-    repo_root = Path(_file_).resolve().parent.parent
+    repo_root = Path(__file__).resolve().parent.parent
     files_dir = repo_root / "files"
     output_dir = files_dir / "output"
 
