@@ -16,7 +16,7 @@ def pregunta_01():
     repositorio, la cual contiene la siguiente estructura de archivos:
 
 
-    ```
+    
     train/
         negative/
             0000.txt
@@ -43,7 +43,7 @@ def pregunta_01():
             0000.txt
             0001.txt
             ...
-    ```
+    
 
     A partir de esta informacion escriba el código que permita generar
     dos archivos llamados "train_dataset.csv" y "test_dataset.csv". Estos
@@ -59,7 +59,7 @@ def pregunta_01():
 
     Cada archivo tendria una estructura similar a la siguiente:
 
-    ```
+    
     |    | phrase                                                                                                                                                                 | target   |
     |---:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|:---------|
     |  0 | Cardona slowed her vehicle , turned around and returned to the intersection , where she called 911                                                                     | neutral  |
@@ -67,7 +67,58 @@ def pregunta_01():
     |  2 | Exel is headquartered in Mantyharju in Finland                                                                                                                         | neutral  |
     |  3 | Both operating profit and net sales for the three-month period increased , respectively from EUR16 .0 m and EUR139m , as compared to the corresponding quarter in 2006 | positive |
     |  4 | Tampere Science Parks is a Finnish company that owns , leases and builds office properties and it specialises in facilities for technology-oriented businesses         | neutral  |
-    ```
+    
 
 
     """
+    from pathlib import Path
+    import re
+    import pandas as pd
+
+
+    repo_root = Path(_file_).resolve().parent.parent
+    files_dir = repo_root / "files"
+    output_dir = files_dir / "output"
+
+    def encontrar_base_train_test() -> Path:
+        candidatos = [
+            repo_root / "input",       
+            files_dir / "input",
+            files_dir / "input" / "input",
+        ]
+        for base in candidatos:
+            if (base / "train").exists() and (base / "test").exists():
+                return base
+
+        for p in files_dir.rglob("train"):
+            base = p.parent
+            if (base / "test").exists():
+                return base
+        raise FileNotFoundError("No se encontró una carpeta con 'train' y 'test' dentro de 'files/'.")
+
+    base_dir = encontrar_base_train_test()
+
+    def construir_dataset(split: str) -> pd.DataFrame:
+        registros = []
+        for sentimiento in ("negative", "positive", "neutral"):
+            carpeta = base_dir / split / sentimiento
+            if not carpeta.exists():
+                continue
+            for txt in sorted(carpeta.glob("*.txt")):
+                texto = txt.read_text(encoding="utf-8", errors="ignore")
+                texto = re.sub(r"\s+", " ", texto).strip()
+                registros.append({"phrase": texto, "target": sentimiento})
+        return pd.DataFrame(registros, columns=["phrase", "target"])
+
+    train_df = construir_dataset("train")
+    test_df  = construir_dataset("test")
+
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+
+    train_df.to_csv(output_dir / "train_dataset.csv", index=False, encoding="utf-8")
+    test_df.to_csv(output_dir / "test_dataset.csv", index=False, encoding="utf-8")
+
+
+    return
